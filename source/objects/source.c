@@ -217,13 +217,20 @@ int sourceIsLooping(lua_State *L) { // source:isLooping()
 int sourceGC(lua_State *L) { // Garbage Collection
 
 	love_source *self = luaobj_checkudata(L, 1, CLASS_TYPE);
+	
+    CSND_SetPlayState(self->channel, false);
+	CSND_UpdateInfo(0);
 
-	if (!self->buffer) return 0;
-
-	linearFree(self->buffer);
-	self->buffer = NULL;
-
-	channelList[self->channel - 8] = false;
+	if (self->buffer != NULL) {
+		GSPGPU_FlushDataCache(self->buffer, self->size - 44);
+	    linearFree(self->buffer);
+		
+		channelList[self->channel] = false;
+	} else {
+		return 0;
+    }
+    
+    CSND_UpdateInfo(0);
 
 	return 0;
 
