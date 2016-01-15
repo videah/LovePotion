@@ -229,6 +229,28 @@ int sourceGC(lua_State *L) { // Garbage Collection
 
 }
 
+int sourceUnload(lua_State *L) { // source:Unload(). Stops the sound and frees up memory.
+
+	love_source *self = luaobj_checkudata(L, 1, CLASS_TYPE);
+	
+    CSND_SetPlayState(self->channel, false);
+	CSND_UpdateInfo(0);
+
+	if (self->buffer != NULL) {
+		GSPGPU_FlushDataCache(self->buffer, self->size - 44);
+	    linearFree(self->buffer);
+		
+		channelList[self->channel] = false;
+	} else {
+		return 0;
+    }
+    
+    CSND_UpdateInfo(0);
+
+	return 0;
+
+}
+
 int initSourceClass(lua_State *L) {
 
 	luaL_Reg reg[] = {
@@ -238,6 +260,7 @@ int initSourceClass(lua_State *L) {
 		{"stop",		sourceStop	},
 		{"isPlaying",	sourceIsPlaying},
 		{"setLooping",	sourceSetLooping},
+		{"unload",	    sourceUnload},
 		{ 0, 0 },
 	};
 
