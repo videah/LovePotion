@@ -50,6 +50,7 @@ typedef struct {
 } love_image;
 
 typedef struct {
+	int id;
 	sftd_font *font;
 	int size;
 } love_font;

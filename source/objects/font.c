@@ -24,8 +24,10 @@
 
 #include "Vera_ttf.h"
 
-int fontLimit = 2;
-int fontCounter = 0;
+// Initializes two arrays filled with null pointers.
+sftd_font *fontPntrArray[10] = { 0 };
+char *fontPathArray[10] = { 0 };
+int fontUseArray[10] = { 0 };
 
 #define CLASS_TYPE  LUAOBJ_TYPE_FONT
 #define CLASS_NAME  "Font"
@@ -34,7 +36,46 @@ const char *fontInit(love_font *self, const char *filename, int size) {
 
 	if (!fileExists(filename)) return "Could not open font. Does not exist.";
 
-	self->font = sftd_load_font_file(filename);
+	int i;
+	bool fontExists = false;
+
+	for (i = 1; i < 10; i++) { // Has the font already been loaded before?
+
+		if (strcmp(fontPathArray[i], filename) == 0) {
+			fontExists = true;
+			break;
+		}
+
+	}
+
+	if (fontExists) { // The font's already been loaded.
+
+		self->font = fontPntrArray[i];
+		self->id = i;
+
+		fontUseArray[i]++;
+
+	} else { // The font hasn't been loaded, load it in and store it in the cache.
+
+		int k;
+		for (k = 1; k < 10; k++) {
+
+			if (fontPathArray[k] == 0) {
+
+				strcpy(fontPathArray[k], filename);
+				fontPntrArray[k] = sftd_load_font_file(filename);
+
+				self->font = fontPntrArray[k];
+				self->id = k;
+
+				fontUseArray[k]++;
+				break;
+
+			}
+		}
+
+	}
+
 	self->size = size;
 
 	return NULL;
@@ -43,8 +84,18 @@ const char *fontInit(love_font *self, const char *filename, int size) {
 
 const char *fontDefaultInit(love_font *self, int size) {
 
-	self->font = sftd_load_font_mem(Vera_ttf, Vera_ttf_size);
+	if (fontPntrArray[0] == 0) {
+
+		fontPntrArray[0] = sftd_load_font_mem(Vera_ttf, Vera_ttf_size);
+		strcpy(fontPathArray[0], "Memory");
+
+	}
+
+	self->font = fontPntrArray[0];
 	self->size = size;
+	self->id = 0;
+
+	fontUseArray[0]++;
 
 	return NULL;
 
@@ -52,47 +103,71 @@ const char *fontDefaultInit(love_font *self, int size) {
 
 int fontNew(lua_State *L) { // love.graphics.newFont()
 
-	if (fontCounter <= fontLimit) {
+	char *error;
+	char *filename;
+	int size;
 
-		fontCounter += 1;
+	// const char *filename = lua_isnoneornil(L, 1) ? NULL : luaL_checkstring(L, 1);
+	// int size = lua_isnoneornil(L, 2) ? NULL : luaL_checkinteger(L, 2);
 
-		const char *filename = lua_isnoneornil(L, 1) ? NULL : luaL_checkstring(L, 1);
-		int size = lua_isnoneornil(L, 2) ? NULL : luaL_checkinteger(L, 2);
+	love_font *self = luaobj_newudata(L, sizeof(*self));
 
-		love_font *self = luaobj_newudata(L, sizeof(*self));
+	luaobj_setclass(L, CLASS_TYPE, CLASS_NAME);
 
-		luaobj_setclass(L, CLASS_TYPE, CLASS_NAME);
+	// if (!size) size = 14;
 
-		if (!size) size = 14;
+	// if (filename) {
 
-		if (filename) {
+	// 	const char *error = fontInit(self, filename, size);
 
-			const char *error = fontInit(self, filename, size);
+	// 	if (error) luaError(L, error);
 
-			if (error) luaError(L, error);
+	// } else {
 
-		} else {
+	// 	fontDefaultInit(self, size);
+	// }
 
-			fontDefaultInit(self, size);
-		}
+	// return 1;
 
-		return 1;
+	if (lua_type(L, 1) == LUA_TNUMBER) {
+
+		size = luaL_checkinteger(L, 1);
+		error = fontDefaultInit(self, size);
+
+	} else if (lua_type(L, 1) == LUA_TSTRING) {
+
+		filename = luaL_checkstring(L, 1);
+		size = luaL_optnumber(L, 2, 14);
+		error = fontInit(self, filename, size);
 
 	} else {
 
-		luaError(L, "LovePotion currently has a 2 font limit. This limitation will hopefully be lifted in future versions.");
-		return 0;
+		size = 14;
+		error = fontDefaultInit(self, size);
 
 	}
 
+	if (error) luaError(L, error);
+
+	return 1;
 
 }
 
 int fontGC(lua_State *L) { // Garbage Collection
 
-	fontCounter -= 1;
 	love_font *self = luaobj_checkudata(L, 1, CLASS_TYPE);
-	sftd_free_font(self->font);
+
+	if (fontUseArray[self->id] == 0) {
+
+		sftd_free_font(self->font);
+		fontPntrArray[self->id] = 0;
+		fontPathArray[self->id] = 0;
+
+	} else {
+
+		fontUseArray[self->id]--;
+
+	}
 
 	return 0;
 
