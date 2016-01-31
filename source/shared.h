@@ -39,6 +39,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <3ds/services/cfgu.h>
 
 #define CONFIG_3D_SLIDERSTATE (*(float*)0x1FF81080)
@@ -68,6 +69,14 @@ typedef struct {
 // 	ndspInterpType interp;
 // 	u32 numSamples;
 // } love_source;
+
+typedef struct {
+	FILE * file;
+	const char * filename;
+	const char * mode;
+	long size;
+	long position;
+} love_file;
 
 typedef enum {
 	TYPE_UNKNOWN = -1,
