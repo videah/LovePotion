@@ -37,6 +37,7 @@ char *errMsg;
 void displayError() {
 
 	errMsg = lua_tostring(L, -1);
+
 	errorOccured = true;
 	printf("\e[0;31m%s\e[0m",errMsg);
 
@@ -53,7 +54,7 @@ int main() {
 	cfguInit();
 	ptmuInit();
 
-	// consoleInit(GFX_BOTTOM, NULL);
+	//consoleInit(GFX_BOTTOM, NULL);
 
 	sf2d_set_clear_color(RGBA8(0x0, 0x0, 0x0, 0xFF)); // Reset background color.
 
@@ -146,6 +147,11 @@ int main() {
 				"if love.update then love.update(love.timer.getDelta()) end")) {
 					displayError();
 			}
+
+			//Update sources that stream or something
+			//for (int i = 0; i < streamCount; i++) {
+			//	sourceUpdate(L, streams[i]);
+			//}
 
 			// Top screen
 			// Left side
