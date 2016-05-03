@@ -50,7 +50,7 @@ AccessControlInfo:
    #- CategorySystemSettings
    #- CardBoard
    #- ExportImportIvs
-   #- DirectSdmcWrite
+   - DirectSdmcWrite
    #- SwitchCleanup
    #- SaveDataMove
    #- Shop

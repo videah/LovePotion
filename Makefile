@@ -33,9 +33,9 @@ SOURCES		:=	source source/libs/lua source/modules source/objects source/libs/lua
 DATA		:=	data
 INCLUDES	:=	source source/libs/lua source/modules source/objects source/libs/luaobj source/libs/tremor source/libs/sf2dlib/include source/libs/sftdlib/include source/libs/sfillib/include
 
-APP_TITLE	:=	LovePotion
-APP_AUTHOR	:=	Ruairidh 'VideahGams' Carmichael
-APP_DESCRIPTION	:=	Implementation of the LOVE framework for 3DS.
+APP_TITLE	:=	Turtle: Invaders
+APP_AUTHOR	:=	TurtleP
+APP_DESCRIPTION	:=	2D Fixed-Axis shooter
 
 ICON := meta/icon.png
 BANNER := meta/banner.png
@@ -43,8 +43,8 @@ JINGLE := meta/jingle.wav
 
 # CIA Options
 
-APP_PRODUCT_CODE := CTR-P-LP
-APP_UNIQUE_ID := 0x1043
+APP_PRODUCT_CODE := CTR-P-TI
+APP_UNIQUE_ID := 0xF5ACD
 APP_SYSTEM_MODE := 64MB
 APP_SYSTEM_MODE_EXT := Legacy
 APP_ROMFS_DIR := $(TOPDIR)/game
