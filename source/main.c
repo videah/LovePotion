@@ -24,7 +24,7 @@
 #include "boot_lua.h"
 #include "nogame_lua.h"
 
-char *rootDir = "";
+char sdmcPath[255];
 
 lua_State *L;
 
@@ -76,13 +76,23 @@ int main() {
 
 	if (romfsExists) {
 
+		u64 titleID;
+
+		APT_GetProgramID(&titleID);
+
+		snprintf(sdmcPath, sizeof(sdmcPath), "sdmc:/Love Potion/%d", titleID);
+
 		chdir("romfs:/");
+
+		mkdir(sdmcPath, 0777);
 
 	} else {
 
 		char cwd[256];
 		getcwd(cwd, 256);
 		char newCwd[261];
+
+		snprintf(sdmcPath, sizeof(sdmcPath), "");
 
 		strcat(newCwd, cwd);
 		strcat(newCwd, "game");

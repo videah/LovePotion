@@ -55,7 +55,7 @@ int filesystemRead(lua_State *L) {
 
 int filesystemCreateDirectory(lua_State *L) {
 
-	const char * directoryName = luaL_checkstring(L, 1);
+	const char * directoryName = filesystemCheckPath(luaL_checkstring(L, 1));
 
 	if (directoryName) {
 		mkdir(directoryName, 0777);
@@ -111,7 +111,7 @@ int filesystemGetDirectoryItems(lua_State *L) {
 
 int filesystemAppend(lua_State * L) {
 
-	const char * filename = luaL_checkstring(L, 1);
+	const char * filename = filesystemCheckPath(luaL_checkstring(L, 1));
 
 	const char * data = luaL_checkstring(L, 2);
 
@@ -131,7 +131,7 @@ int filesystemAppend(lua_State * L) {
 
 int filesystemIsFile(lua_State *L) {
 
-	const char * filename = luaL_checkstring(L, 1);
+	const char * filename = filesystemCheckPath(luaL_checkstring(L, 1));
 
 	struct stat info;
 
@@ -154,7 +154,7 @@ int filesystemIsFile(lua_State *L) {
 
 int filesystemRemove(lua_State *L) {
 
-	const char * filename = luaL_checkstring(L, 1);
+	const char * filename = filesystemCheckPath(luaL_checkstring(L, 1));
 
 	remove(filename);
 
@@ -164,7 +164,7 @@ int filesystemRemove(lua_State *L) {
 
 int filesystemWrite(lua_State *L) {
 
-	const char * filename = luaL_checkstring(L, 1);
+	const char * filename = filesystemCheckPath(luaL_checkstring(L, 1));
 
 	const char * data = luaL_checkstring(L, 2);
 
@@ -184,7 +184,7 @@ int filesystemWrite(lua_State *L) {
 
 int filesystemIsDirectory(lua_State * L) {
 
-	const char * filename = luaL_checkstring(L, 1);
+	const char * filename = filesystemCheckPath(luaL_checkstring(L, 1));
 
 	struct stat info;
 
@@ -213,8 +213,10 @@ int filesystemLoad(lua_State *L) {
 
 }
 
-int filesystemSetRequirePath(lua_State *L) {
-
+char * filesystemCheckPath(char * luaString) {
+	if (luaString != NULL) {
+		return strcat(sdmcPath, luaString);
+	}
 }
 
 int fileNew(lua_State *L);

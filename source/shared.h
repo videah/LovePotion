@@ -146,6 +146,8 @@ extern char keyNames[32][32];
 extern touchPosition touch;
 extern bool touchIsDown;
 extern char *rootDir;
+extern char sdmcPath[255];
+extern char * filesystemCheckPath(char * luaString);
 extern bool shouldQuit;
 extern love_font *currentFont;
 extern bool is3D;
