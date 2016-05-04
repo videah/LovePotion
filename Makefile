@@ -33,7 +33,7 @@ SOURCES		:=	source source/libs/lua source/modules source/objects source/libs/lua
 DATA		:=	data
 INCLUDES	:=	source source/libs/lua source/modules source/objects source/libs/luaobj source/libs/tremor source/libs/sf2dlib/include source/libs/sftdlib/include source/libs/sfillib/include
 
-APP_TITLE	:=	Turtle: Invaders
+APP_TITLE	:=	TurtleInvaders
 APP_AUTHOR	:=	TurtleP
 APP_DESCRIPTION	:=	2D Fixed-Axis shooter
 

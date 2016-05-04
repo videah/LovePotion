@@ -141,9 +141,7 @@ int main() {
 			}
 
 			//Update sources that stream or something
-			//for (int i = 0; i < streamCount; i++) {
-			//	sourceUpdate(L, streams[i]);
-			//}
+			//updateSources();
 
 			// Top screen
 			// Left side

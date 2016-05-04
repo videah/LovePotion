@@ -60,6 +60,10 @@ int filesystemCreateDirectory(lua_State *L) {
 	if (directoryName) {
 		mkdir(directoryName, 0777);
 	}
+
+
+	return 0;
+
 }
 
 int filesystemGetDirectoryItems(lua_State *L) {
@@ -122,6 +126,7 @@ int filesystemAppend(lua_State * L) {
 	fclose(file);
 
 	return 0;
+
 }
 
 int filesystemIsFile(lua_State *L) {
@@ -139,12 +144,12 @@ int filesystemIsFile(lua_State *L) {
 			return 1;
 		}
 
-		lua_pushboolean(L, 0);
-
-		return 1;
 	}
 
+	lua_pushboolean(L, 0);
+
 	return 1;
+
 }
 
 int filesystemRemove(lua_State *L) {
@@ -169,6 +174,10 @@ int filesystemWrite(lua_State *L) {
 
 	fwrite(data, 1, size, file);
 
+	fflush(file);
+
+	fclose(file);
+	
 	return 0;
 
 }
@@ -186,12 +195,12 @@ int filesystemIsDirectory(lua_State * L) {
 			return 1;
 		}
 
-		lua_pushboolean(L, 0);
-		
-		return 1;
 	}
 
+	lua_pushboolean(L, 0);
+		
 	return 1;
+
 }
 
 int filesystemLoad(lua_State *L) {
@@ -218,8 +227,6 @@ int fileOpen(lua_State *L);
 
 
 int initLoveFilesystem(lua_State *L) {
-
-	printf("init filesystem\n");
 
 	luaL_Reg reg[] = {
 		{ "newFile", 		fileNew },
