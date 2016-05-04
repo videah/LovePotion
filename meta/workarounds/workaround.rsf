@@ -50,7 +50,7 @@ AccessControlInfo:
    #- CategorySystemSettings
    #- CardBoard
    #- ExportImportIvs
-   - DirectSdmcWrite
+   #- DirectSdmcWrite
    #- SwitchCleanup
    #- SaveDataMove
    #- Shop
@@ -190,7 +190,7 @@ AccessControlInfo:
 
 
 SystemControlInfo:
-  SaveDataSize: 128KB # Change if the app uses savedata
+  SaveDataSize: 0KB # Change if the app uses savedata
   RemasterVersion: 2
   StackSize: 0x40000
 
