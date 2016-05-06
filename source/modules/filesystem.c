@@ -26,12 +26,12 @@ const char *fileInit(love_file *self, const char *filename);
 
 int filesystemRead(lua_State *L) {
 
-	const char * filename = luaL_checkstring(L, 1);
+	const char * filename = filesystemGetPath(luaL_checkstring(L, 1));
 
-	if (filename) {
+	if (filename != NULL) {
 
 		FILE * file = fopen(filename, "rb");
-		
+
 		fseek(file, 0, SEEK_END);
 
 		long fsize = ftell(file);
@@ -51,6 +51,7 @@ int filesystemRead(lua_State *L) {
 	}
 
 	return 0;
+
 }
 
 int filesystemCreateDirectory(lua_State *L) {
@@ -58,9 +59,10 @@ int filesystemCreateDirectory(lua_State *L) {
 	const char * directoryName = filesystemCheckPath(luaL_checkstring(L, 1));
 
 	if (directoryName) {
-		mkdir(directoryName, 0777);
-	}
 
+		mkdir(directoryName, 0777);
+	
+	}
 
 	return 0;
 
@@ -68,7 +70,7 @@ int filesystemCreateDirectory(lua_State *L) {
 
 int filesystemGetDirectoryItems(lua_State *L) {
 
-	const char * path = luaL_checkstring(L, 1);
+	const char * path = filesystemCheckPath(luaL_checkstring(L, 1));
 
 	DIR * dp;
 
@@ -98,10 +100,6 @@ int filesystemGetDirectoryItems(lua_State *L) {
 		}
 
 		return 1;
-
-	} else {
-
-		return 0;
 
 	}
 
@@ -140,6 +138,8 @@ int filesystemIsFile(lua_State *L) {
 		if (S_ISREG(info.st_mode)) {
 
 			lua_pushboolean(L, 1);
+
+			free(filename);
 
 			return 1;
 		}
@@ -192,31 +192,90 @@ int filesystemIsDirectory(lua_State * L) {
 		if (S_ISDIR(info.st_mode)) {
 			lua_pushboolean(L, 1);
 
+			free(filename);
+
 			return 1;
 		}
 
 	}
 
 	lua_pushboolean(L, 0);
-		
+
 	return 1;
 
 }
 
 int filesystemLoad(lua_State *L) {
 
-	const char * filename = luaL_checkstring(L, 1);
+	const char * filename = filesystemGetPath(luaL_checkstring(L, 1));
 
-	luaL_loadfile(L, filename);
+	if (filename != NULL) {
 
-	return 1;
+		luaL_loadfile(L, filename);
 
+		return 1;
+	
+	}
+
+	return 0;
 }
 
+int filesystemGetSaveDirectory(lua_State * L) {
+	lua_pushstring(L, sdmcPath);
+
+	return 1;
+}
+
+
+//Check the path. Redirect to SDMC!
 char * filesystemCheckPath(char * luaString) {
 	if (luaString != NULL) {
-		return strcat(sdmcPath, luaString);
+		int len = strlen(sdmcPath) + strlen(luaString);
+
+		char * temp = malloc(len + 1);
+
+		strcpy(temp, sdmcPath);
+
+		strcat(temp, luaString);
+		
+		return temp;
 	}
+}
+
+//Get the path we *want*. For Read operations only.
+char * filesystemGetPath(char * luaString) {
+	FILE * tempFile = fopen(luaString, "rb");
+
+	if (tempFile == NULL) {
+
+		fclose(tempFile);
+
+		char * path = filesystemCheckPath(luaString);
+
+		tempFile = fopen(path, "rb");
+
+		if (tempFile != NULL) {
+
+			fclose(tempFile);
+
+			return path;
+
+		} else {
+
+			fclose(tempFile);
+
+			return NULL;
+
+		}
+
+	} else {
+
+		fclose(tempFile);
+
+		return luaString;
+
+	}
+
 }
 
 int fileNew(lua_State *L);
@@ -235,6 +294,7 @@ int initLoveFilesystem(lua_State *L) {
 		{ "read", 		filesystemRead },
 		{ "createDirectory", 		filesystemCreateDirectory },
 		{ "getDirectoryItems",	filesystemGetDirectoryItems},
+		{ "getSaveDirectory",	filesystemGetSaveDirectory},
 		{ "append",	filesystemAppend},
 		{ "isFile",	filesystemIsFile},
 		{ "isDirectory",	filesystemIsDirectory},

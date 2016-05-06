@@ -147,7 +147,10 @@ extern touchPosition touch;
 extern bool touchIsDown;
 extern char *rootDir;
 extern char sdmcPath[255];
+
 extern char * filesystemCheckPath(char * luaString);
+extern char * filesystemGetPath(char * luaString);
+
 extern bool shouldQuit;
 extern love_font *currentFont;
 extern bool is3D;
@@ -157,4 +160,3 @@ extern bool channelList[24];
 extern u32 defaultFilter;
 extern char *defaultMinFilter;
 extern char *defaultMagFilter;
-extern bool isCIA;

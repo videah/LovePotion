@@ -71,18 +71,19 @@ int main() {
 	Result rc = romfsInit();
 
 	romfsExists = (rc) ? false : true;
-
+	
 	// Change working directory
-
 	if (romfsExists) {
 
 		u64 titleID;
 
 		APT_GetProgramID(&titleID);
 
-		snprintf(sdmcPath, sizeof(sdmcPath), "sdmc:/Love Potion/%d", titleID);
+		snprintf(sdmcPath, sizeof(sdmcPath), "sdmc:/LovePotion/%X/", titleID);
 
 		chdir("romfs:/");
+
+		mkdir("sdmc:/LovePotion/", 0777);
 
 		mkdir(sdmcPath, 0777);
 
@@ -92,7 +93,7 @@ int main() {
 		getcwd(cwd, 256);
 		char newCwd[261];
 
-		snprintf(sdmcPath, sizeof(sdmcPath), "");
+		snprintf(sdmcPath, sizeof(sdmcPath), "%s", "");
 
 		strcat(newCwd, cwd);
 		strcat(newCwd, "game");
