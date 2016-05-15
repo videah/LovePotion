@@ -131,7 +131,7 @@ typedef struct {
 	int height;
 } love_quad;
 
-bool initializeSocket;
+#define SOCKETSIZE 8192
 typedef struct {
 	int socket;
 	struct sockaddr_in address;
@@ -155,7 +155,10 @@ extern bool shouldQuit;
 extern love_font *currentFont;
 extern bool is3D;
 extern const char *fontDefaultInit();
+
 extern bool soundEnabled;
+extern bool initializeSocket;
+
 extern bool channelList[24];
 extern u32 defaultFilter;
 extern char *defaultMinFilter;

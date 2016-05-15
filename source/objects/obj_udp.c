@@ -25,21 +25,39 @@
 #define CLASS_TYPE  LUAOBJ_TYPE_SOCKET
 #define CLASS_NAME  "Socket"
 
-int socketInitUDP(lua_socket * self) {
+const char * socketInitUDP(lua_socket * self) {
 	self->socket = socket(AF_INET, SOCK_DGRAM, 0);
 
 	if (self->socket < 0) {
-		lua_pushnil(L);
-
-		lua_pushstring(L, "Failed to create a UDP socket.");
-
-		return 2;
+		return "Failed to create a UDP socket.";
 	}
 
+	memset(&self->address, 0, sizeof(self->address));
+	
 	self->address.sin_family = AF_INET;
-	fcntl(self->socket, F_SETFL, O_NONBLOCK);
+	
+	int flags, blockSuccess;
 
-	return 0;
+	flags = fcntl(self->socket, F_GETFL);
+	if (flags < 0) {
+		return "Failed to get flags for socket.";
+	}
+
+	blockSuccess = fcntl(self->socket, F_SETFL, flags + O_NONBLOCK);
+	if (blockSuccess != 0) {
+		return "Failed to set socket to non-blocking.";
+	}
+
+	//Set buffer things apparently
+
+	//Receive Buffer
+	int socketSize = SOCKETSIZE;
+	setsockopt(self->socket, SOL_SOCKET, SO_RCVBUF, &socketSize, sizeof(socketSize));
+
+  	//Send Buffer
+  	setsockopt(self->socket, SOL_SOCKET, SO_SNDBUF, &socketSize, sizeof(socketSize));
+
+	return NULL;
 }
 
 int newUDP(lua_State * L) { //require("socket").udp()
@@ -47,7 +65,10 @@ int newUDP(lua_State * L) { //require("socket").udp()
 
 	luaobj_setclass(L, CLASS_TYPE, CLASS_NAME);
 
-	socketInitUDP(self);
+	char * error = socketInitUDP(self);
+	if (error) {
+		luaError(L, error);
+	}
 
 	return 1;
 }
@@ -77,6 +98,19 @@ int socketInitTCP(lua_socket * self) {
 	fcntl(self->socket, F_SETFL, fcntl(self->socket, F_GETFL, 0) | O_NONBLOCK);
 
 	return 1;
+}
+
+int socketSetTimeout(lua_State * L) { //socket:settimeout
+	lua_socket * self = luaobj_checkudata(L, 1, CLASS_TYPE);
+
+	int setBlocking = luaL_checkinteger(L, 1);
+
+	int flags = O_NONBLOCK;
+	if (setBlocking != 0) {
+		flags = ~O_NONBLOCK;
+	}
+
+	fcntl(self->socket, F_SETFL, flags);
 }
 
 int socketClose(lua_State *L) { //socket:close
@@ -119,11 +153,13 @@ int socketGetSocketName(lua_State * L) { //socket:getsockname
 int socketReceive(lua_State * L) {
 	lua_socket * self = luaobj_checkudata(L, 1, CLASS_TYPE);
 
-	int datagramSize = luaL_optnumber(L, 2, 8192);
+	int datagramSize = luaL_optnumber(L, 2, SOCKETSIZE);
 
 	char * buffer = malloc(datagramSize + 1);
 
-	int length = recv(self->socket, buffer, datagramSize, 0);
+	int flags = fcntl(self->socket, F_GETFL);
+
+	int length = recv(self->socket, buffer, datagramSize, flags);
 
 	*(buffer + length) = 0x0;
 
@@ -136,7 +172,7 @@ int socketReceiveFrom(lua_State * L) {
 	lua_socket * self = luaobj_checkudata(L, 1, CLASS_TYPE);
 
 	//Get the data first
-	int datagramSize = luaL_optnumber(L, 2, 8192);
+	int datagramSize = luaL_optnumber(L, 2, SOCKETSIZE);
 
 	struct sockaddr_in address;
 	socklen_t addressSize = sizeof(address);
@@ -165,7 +201,9 @@ int socketReceiveFrom(lua_State * L) {
 
 	char * buffer = malloc(datagramSize + 1);
 
-	int length = recvfrom(self->socket, buffer, datagramSize, 0, (struct sockaddr *)&fromInfo, NULL);
+	int flags = fcntl(self->socket, F_GETFL);
+
+	int length = recvfrom(self->socket, buffer, datagramSize, flags, (struct sockaddr *)&fromInfo, NULL);
 
 	*(buffer + length) = 0x0;
 
@@ -225,9 +263,11 @@ int socketSendTo(lua_State * L) {
 	addressTo.sin_port = htons(port);
 	addressTo.sin_family = AF_INET;
 
-	sendto(self->socket, data, size, 0, (struct sockaddr *)&addressTo, sizeof(addressTo));
+	size_t sent = sendto(self->socket, data, size, 0, (struct sockaddr *)&addressTo, sizeof(addressTo));
 
-	return 0;
+	lua_pushnumber(L, sent);
+
+	return 1;
 }
 
 int socketListen(lua_State * L) {
@@ -255,9 +295,9 @@ int socketConnect(lua_State * L) {
 		lua_pushstring(L, "Unable to resolve host.");
 	}
 
-	self->address.sin_port = port;
+	self->address.sin_port = htons(port);
 
-	self->address.sin_addr.s_addr = address;
+	bcopy(self->host->h_addr, self->address.sin_addr.s_addr, self->host->h_length);
 
 	int connectionSuccess = connect(self->socket, (const struct sockaddr *)&self->address, sizeof(self->address));
 
@@ -277,21 +317,31 @@ int socketConnect(lua_State * L) {
 int socketSetPeerName(lua_State * L) {
 	lua_socket * self = luaobj_checkudata(L, 1, CLASS_TYPE);
 
-	self->address.sin_addr.s_addr = luaL_checkstring(L, 2);
+	char * address = luaL_checkstring(L, 2);
 
-	self->address.sin_port = luaL_checkinteger(L, 3);
+	int port = luaL_checkinteger(L, 3);
+
+	self->host = gethostbyname(address);
+
+	if (self->host == NULL) {
+		luaError(L, "Could not resolve host name");
+
+		return 0;
+	}
+
+	self->address.sin_port = htons(port);
+
+	bcopy((char *)self->host->h_addr, (char *)self->address.sin_addr.s_addr, self->host->h_length);
 
 	int connectionSuccess = connect(self->socket, (const struct sockaddr *)&self->address, sizeof(self->address));
 
 	if (connectionSuccess < 0) {
-		lua_pushnil(L);
+		luaError(L, "Could not connect to host.");
 
-		lua_pushstring(L, "Could not connect to host.");
-
-		return 2;
+		return 0;
 	}
 
-	lua_pushnumber(L, 1);
+	lua_pushboolean(L, 1);
 
 	return 1;
 }
@@ -360,6 +410,7 @@ int initSocketClass(lua_State *L) {
 		{"setpeername", socketSetPeerName},
 		{"getsockname", socketGetSocketName},
 		{"setsockname", socketSetSockName},
+		{"settimeout", socketSetTimeout},
 		{"receive",  socketReceive},
 		{"receivefrom", socketReceiveFrom},
 		{"send", socketSend},
@@ -368,7 +419,6 @@ int initSocketClass(lua_State *L) {
 		{"accept", socketAccept},
 		{"connect", socketConnect},
 		{"listen", socketListen},
-		{"__gc", socketClose},
 		{0,	0},
 	};
 
