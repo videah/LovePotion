@@ -23,14 +23,18 @@
 #include <shared.h>
 
 bool initializeSocket;
+static void * socketBuffer;
 
 int newUDP(lua_State * L);
 int socketNewTCP(lua_State * L);
+int httpRequest(lua_State * L);
 
 int socketShutdown(lua_State * L) {
 	if (initializeSocket) {
 		socExit();
 
+		httpcExit();
+		
 		initializeSocket = false;
 	}
 
@@ -38,22 +42,16 @@ int socketShutdown(lua_State * L) {
 }
 
 int initSocket(lua_State *L) {
-	u32 socketSize = 0x100000;
+	if (!initializeSocket) {
+		socketBuffer = memalign(0x1000, 0x100000);
 
-	u32 * memorySize = (u32 *) memalign(0x1000, socketSize);
+		Result socketIsInitialized = socInit(socketBuffer, 0x100000);
 
-	if (memorySize == NULL) {
-		luaError(L, "Failed to allocate memory for LuaSocket.");
-	}
-
-	Result socketIsInitialized = socInit(memorySize, socketSize);
-
-	if (R_FAILED(socketIsInitialized)) {
-		free(memorySize);
-		
-		luaError(L, "Failed to initialize LuaSocket.");
-	} else {
-		initializeSocket = true;
+		if (R_FAILED(socketIsInitialized)) {
+			luaError(L, "Failed to initialize LuaSocket.");
+		} else {
+			initializeSocket = true;
+		}
 	}
 
 	luaL_Reg reg[] = {
@@ -72,5 +70,39 @@ int initSocket(lua_State *L) {
 	luaL_newlib(L, reg);
 
 	return 1;
+}
 
+int initHTTP(lua_State *L) {
+	if (!initializeSocket) {
+		socketBuffer = memalign(0x1000, 0x100000);
+
+		Result socketIsInitialized = socInit(socketBuffer, 0x100000);
+
+		if (R_FAILED(socketIsInitialized)) {
+			luaError(L, "Failed to initialize LuaSocket.");
+		} else {
+			initializeSocket = true;
+		}
+	}
+
+	Result httpIsInitialized = httpcInit(0);
+
+	if (R_FAILED(httpIsInitialized)) {
+		luaError(L, "Failed to initialize HTTC");
+	}
+
+	luaL_Reg reg[] = {
+		{"request",	httpRequest},
+		{0,	0},
+	};
+
+  	luaL_newmetatable(L, "HTTP");
+	
+	lua_pushvalue(L, -1);
+	
+	lua_setfield(L, -2, "__index");
+
+	luaL_newlib(L, reg);
+
+  	return 1;
 }

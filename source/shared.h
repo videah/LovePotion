@@ -44,8 +44,6 @@
 #include <3ds/services/cfgu.h>
 
 #include <3ds/services/soc.h>
-//#include <3ds/services/sslc.h>
-
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
@@ -53,8 +51,13 @@
 #include <netdb.h>
 #include <fcntl.h>
 
+#include <3ds/services/httpc.h>
+
+#include <errno.h>
+
 #include <ivorbiscodec.h>
 #include <ivorbisfile.h>
+#include <3ds/thread.h>
 
 #include "util.h"
 
@@ -121,9 +124,6 @@ typedef struct {
 	ndspInterpType interp;
 } love_source;
 
-int streamCount;
-love_source * * audioStreams;
-
 typedef struct {
 	int x;
 	int y;
@@ -136,7 +136,20 @@ typedef struct {
 	int socket;
 	struct sockaddr_in address;
 	struct hostent * host;
+	char * ip;
+	int port;
 } lua_socket;
+
+typedef struct {
+	sf2d_rendertarget * renderTarget;
+	int width;
+	int height;
+	lua_CFunction renderFunction;
+} love_canvas;
+
+#define SOURCETHREADSLEEP 1000000ULL * 2 //2 seconds
+extern void fillBuffer();
+extern Thread sourceThread;
 
 extern lua_State *L;
 extern int currentScreen;
@@ -150,6 +163,8 @@ extern char sdmcPath[255];
 
 extern char * filesystemCheckPath(char * luaString);
 extern char * filesystemGetPath(char * luaString);
+
+extern Result httpDownloadSocket(httpcContext * context, u8 * returnBody, int * returnStatusCode);
 
 extern bool shouldQuit;
 extern love_font *currentFont;

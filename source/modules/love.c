@@ -41,8 +41,8 @@ int initLoveWindow(lua_State *L);
 int initLoveEvent(lua_State *L);
 int initLoveAudio(lua_State *L);
 int initLoveFilesystem(lua_State *L);
-
 int initSocket(lua_State * L);
+int initHTTP(lua_State * L);
 
 int initImageClass(lua_State *L);
 int initFontClass(lua_State *L);
@@ -51,6 +51,7 @@ int initFileClass(lua_State *L);
 int initQuadClass(lua_State *L);
 int initJoystickClass(lua_State *L);
 int initSocketClass(lua_State *L);
+int initCanvasClass(lua_State *L);
 
 int initLove(lua_State *L) {
 
@@ -66,6 +67,7 @@ int initLove(lua_State *L) {
 		initFileClass,
         initJoystickClass,
         initSocketClass,
+        initCanvasClass,
 		NULL,
 	};
 

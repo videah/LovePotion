@@ -23,6 +23,8 @@
 #include <shared.h>
 
 bool channelList[24];
+int streamCount;
+love_source * * audioStreams;
 
 int getOpenChannel() {
 
@@ -166,8 +168,11 @@ const char *sourceInit(love_source *self, const char *filename, const char *load
 					}
 
 					self->data = linearAlloc(SAMPLESPERBUFFER * BYTESPERSAMPLE * 2);
-
-					fillBuffer(self, self->offset, SAMPLESPERBUFFER * 2, file);
+					
+					printf("Adding %s to streams!\n", self->filename);
+					
+					audioStreams[streamCount] = self;
+					streamCount++;
 
 					fclose(file);
 
@@ -296,44 +301,31 @@ const char *sourceInit(love_source *self, const char *filename, const char *load
 }
 
 //Source, Offset (starts at 1), Samples per buffer * 2
-void fillBuffer(love_source * self, size_t offset, size_t size, FILE * file) {
-
-	if ( self->type == TYPE_WAV ) {
-		fread(self->data, size, 8, file);
-	}
-
-	offset += SAMPLESPERBUFFER;
-
-	fseek(file, offset, SEEK_SET);
-
-}
-
-void updateSources() {
-
-	for (int i = 0; i < streamCount; i++) {
-
-		love_source * self = audioStreams[i];
-
-		if (self->stream) {
-
-			double pos = (double)(ndspChnGetSamplePos(self->audiochannel)) / self->rate;
-
-			double maxPos = (double)(self->nsamples) / self->rate;
-
-			if (pos == maxPos) {
+void fillBuffer() {
+	while true {
+		printf("Filling buffer..\n");
+		for (int i = 0; i < streamCount; i++) {
+			love_source * self = audioStreams[i];
+			
+			if ( self->type == TYPE_WAV ) {
 
 				FILE * file = fopen(self->filename, "rb");
 
-				fillBuffer(self, self->offset, SAMPLESPERBUFFER * 2, file);
+				fread(self->data, SAMPLESPERBUFFER, 8, file);
+
+				self->offset += SAMPLESPERBUFFER;
+				if (self->offset > self->size) {
+					self->offset = (self->size - self->offset);
+				}
+
+				fseek(file, self->offset, SEEK_SET);
 
 				fclose(file);
-
 			}
-
 		}
-
+		printf("Filled. Sleeping for 2s..\n");
+		svcSleepThread((u64)SOURCETHREADSLEEP);
 	}
-
 }
 
 int sourceNew(lua_State *L) { // love.audio.newSource()
@@ -518,8 +510,6 @@ int sourceGetDuration(lua_State *L) { // source:getDuration()
 }
 
 int initSourceClass(lua_State *L) {
-
-	streamCount = 0;
 
 	luaL_Reg reg[] = {
 		{"new",			sourceNew	},

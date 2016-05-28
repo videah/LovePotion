@@ -733,6 +733,7 @@ static int graphicsGetDefaultFilter(lua_State *L) { // love.graphics.getDefaultF
 int imageNew(lua_State *L);
 int fontNew(lua_State *L);
 int quadNew(lua_State *L);
+int canvasNew(lua_State * L);
 
 const char *fontDefaultInit(love_font *self, int size);
 

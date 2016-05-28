@@ -65,3 +65,26 @@ int getType(const char *name) {
 	}
 
 }
+
+char * unicode_to_ascii(wchar_t* str, size_t length)
+{
+    wchar_t * ptr = str;
+    char * result = (char * )malloc(sizeof(char) * length);
+
+    char multibyte[32] = {0};
+    int i = 0;
+
+    while (ptr)
+    {
+        
+        int l = wctomb(multibyte, *ptr);
+        result[i] = multibyte[0];
+
+        ptr++;
+        i++;
+    }
+
+    result[i] = '\0';
+
+    return result;
+}

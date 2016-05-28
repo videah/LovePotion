@@ -30,6 +30,7 @@ lua_State *L;
 
 int initLove(lua_State *L);
 int initSocket(lua_State * L);
+int initHTTP(lua_State * L);
 
 bool romfsExists;
 
@@ -49,13 +50,29 @@ void displayError() {
 int main() {
 
 	L = luaL_newstate();
+
 	luaL_openlibs(L);
+
 	luaL_requiref(L, "love", initLove, 1);
+
 	luaL_requiref(L, "socket", initSocket, 0);
 
+	luaL_requiref(L, "socket.http", initHTTP, 0);
+
+	s32 prio = 0;
+
+	svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
+
+	Thread sourceThread = threadCreate(fillBuffer, (void *)NULL, 1024, prio-1, -2, false); //update source function, argument, stack size, priority, CPU (default), don't detach
+
+	int streamCount = 0;
+
 	sf2d_init(); // 2D Drawing lib.
+
 	sftd_init(); // Text Drawing lib.
+
 	cfguInit();
+
 	ptmuInit();
 
 	consoleInit(GFX_BOTTOM, NULL);
@@ -151,9 +168,6 @@ int main() {
 					displayError();
 			}
 
-			//Update sources that stream or something
-			//updateSources();
-
 			// Top screen
 			// Left side
 
@@ -241,7 +255,15 @@ int main() {
 	cfguExit();
 	ptmuExit();
 
-	if (initializeSocket) socExit();
+	threadJoin(sourceThread, U64_MAX);
+
+	threadFree(sourceThread);
+
+	if (initializeSocket) {
+		socExit(); 
+		httpcExit();
+	}
+
 	if (soundEnabled) ndspExit();
 	if (romfsExists) romfsExit();
 

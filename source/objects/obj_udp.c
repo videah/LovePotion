@@ -38,7 +38,7 @@ const char * socketInitUDP(lua_socket * self) {
 	
 	int flags, blockSuccess;
 
-	flags = fcntl(self->socket, F_GETFL);
+	flags = fcntl(self->socket, F_GETFL, 0);
 	if (flags < 0) {
 		return "Failed to get flags for socket.";
 	}
@@ -150,68 +150,60 @@ int socketGetSocketName(lua_State * L) { //socket:getsockname
 	lua_pushnumber(L, ntohs(address.sin_port));
 }
 
-int socketReceive(lua_State * L) {
+int socketReceive(lua_State * L) { //socket:receive -- get data from connected server (clients)
 	lua_socket * self = luaobj_checkudata(L, 1, CLASS_TYPE);
-
-	int datagramSize = luaL_optnumber(L, 2, SOCKETSIZE);
-
+	int datagramSize = 0;
+	
+	if (lua_isnumber(L, 2)) {
+		datagramSize = luaL_checkinteger(L, 2);
+	} else if (lua_isnoneornil(L, 2)) { 
+		datagramSize = SOCKETSIZE;
+	}
+	
 	char * buffer = malloc(datagramSize + 1);
-
-	int flags = fcntl(self->socket, F_GETFL);
-
-	int length = recv(self->socket, buffer, datagramSize, flags);
-
+	
+	int length = recv(self->socket, buffer, datagramSize, 0);
+	
 	*(buffer + length) = 0x0;
-
+	
 	lua_pushstring(L, buffer);
-
+	
+	free(buffer);
+		
 	return 1;
 }
 
-int socketReceiveFrom(lua_State * L) {
+int socketReceiveFrom(lua_State * L) { //socket:receivefrom -- get data from connected server (servers)
 	lua_socket * self = luaobj_checkudata(L, 1, CLASS_TYPE);
 
-	//Get the data first
-	int datagramSize = luaL_optnumber(L, 2, SOCKETSIZE);
-
-	struct sockaddr_in address;
-	socklen_t addressSize = sizeof(address);
+	int datagramSize = 0;
 	
-	getpeername(self->socket, (struct sockaddr*)&address, &addressSize);
-
-	char * hostname = inet_ntoa(address.sin_addr);
-
-	int hostport = ntohs(address.sin_port);
-
-	struct sockaddr_in fromInfo;
-
-	if (hostname != NULL) {
-		struct hostent * hostInfo = gethostbyname(hostname);
-
-		if (hostInfo == NULL) {
-			lua_pushnil(L);
-
-			return 1;
-		}
-
-		fromInfo.sin_addr = *(struct in_addr *)hostInfo->h_addr;
-		fromInfo.sin_port = hostport;
-		fromInfo.sin_family = AF_INET; 
+	if (lua_isnumber(L, 2)) {
+		datagramSize = luaL_checkinteger(L, 2);
+	} else if (lua_isnoneornil(L, 2)) { 
+		datagramSize = SOCKETSIZE;
 	}
 
+	struct sockaddr_in fromAddress = {0};
+	
+	struct hostent * hostInfo = gethostbyname(self->ip);
+	if (!hostInfo) {
+		lua_pushnil(L);
+		
+		return 1;
+	}
+	
+	fromAddress.sin_addr = *(struct in_addr *)hostInfo->h_addr;
+	fromAddress.sin_port = htons(self->port);
+	fromAddress.sin_family = AF_INET;
+	
 	char * buffer = malloc(datagramSize + 1);
-
-	int flags = fcntl(self->socket, F_GETFL);
-
-	int length = recvfrom(self->socket, buffer, datagramSize, flags, (struct sockaddr *)&fromInfo, NULL);
-
-	*(buffer + length) = 0x0;
-
+	int size = recvfrom(self->socket, buffer, datagramSize, 0, (struct sockaddr *)&fromAddress, NULL);
+	*(buffer + size) = 0x0;
+	
 	lua_pushstring(L, buffer);
-
-	lua_pushstring(L, inet_ntoa(fromInfo.sin_addr));
-
-	lua_pushnumber(L, ntohs(fromInfo.sin_port));
+	lua_pushstring(L, inet_ntoa(fromAddress.sin_addr));
+	lua_pushnumber(L, ntohs(fromAddress.sin_port));
 
 	return 3;
 }
@@ -219,19 +211,24 @@ int socketReceiveFrom(lua_State * L) {
 int socketSend(lua_State * L) {
 	lua_socket * self = luaobj_checkudata(L, 1, CLASS_TYPE);
 
-	char * data = luaL_checkstring(L, 2);
+	size_t stringLength;
+	char * data = luaL_checklstring(L, 2, &stringLength);
+	
+	struct hostent * hostInfo = gethostbyname(self->ip);
 
-	size_t size = sizeof(data) / sizeof(* data);
-
-	size_t sent = send(self->socket, data, size, 0);
-
-	if (sent < 0) {
+	if (!hostInfo) {
 		lua_pushnil(L);
 
-		lua_pushstring(L, "Unable to send data.");
-
-		return 2;
+		return 1;
 	}
+
+	struct sockaddr_in addressTo = {0};
+
+	addressTo.sin_addr = *(struct in_addr *)hostInfo->h_addr;
+	addressTo.sin_port = htons(self->port);
+	addressTo.sin_family = AF_INET;
+
+	size_t sent = sendto(self->socket, data, stringLength, 0, (struct sockaddr *)&addressTo, sizeof(addressTo));
 
 	lua_pushnumber(L, sent);
 
@@ -240,13 +237,14 @@ int socketSend(lua_State * L) {
 
 int socketSendTo(lua_State * L) {
 	lua_socket * self = luaobj_checkudata(L, 1, CLASS_TYPE);
-
-	char * data = luaL_checkstring(L, 2);
-
-	size_t size = sizeof(data) / sizeof(* data);
+	
+	size_t stringLength;
+	char * data = luaL_checklstring(L, 2, &stringLength);
 
 	char * hostName = luaL_checkstring(L, 3);
-
+	
+	int port = luaL_checkinteger(L, 4);
+	
 	struct hostent * hostInfo = gethostbyname(hostName);
 
 	if (!hostInfo) {
@@ -255,15 +253,13 @@ int socketSendTo(lua_State * L) {
 		return 1;
 	}
 
-	int port = luaL_checkinteger(L, 4);
-
-	struct sockaddr_in addressTo;
+	struct sockaddr_in addressTo = {0};
 
 	addressTo.sin_addr = *(struct in_addr *)hostInfo->h_addr;
 	addressTo.sin_port = htons(port);
 	addressTo.sin_family = AF_INET;
 
-	size_t sent = sendto(self->socket, data, size, 0, (struct sockaddr *)&addressTo, sizeof(addressTo));
+	size_t sent = sendto(self->socket, data, stringLength, 0, (struct sockaddr *)&addressTo, sizeof(addressTo));
 
 	lua_pushnumber(L, sent);
 
@@ -331,11 +327,13 @@ int socketSetPeerName(lua_State * L) {
 
 	self->address.sin_port = htons(port);
 
-	bcopy((char *)self->host->h_addr, (char *)self->address.sin_addr.s_addr, self->host->h_length);
-
-	int connectionSuccess = connect(self->socket, (const struct sockaddr *)&self->address, sizeof(self->address));
-
-	if (connectionSuccess < 0) {
+	bcopy((char *)self->host->h_addr, (char *)&self->address.sin_addr.s_addr, self->host->h_length); //Copy host info to the new address
+	
+	self->ip = address; //Copy host info to our IP info
+	
+	self->port = port;
+	
+	if (connect(self->socket, (const struct sockaddr *)&self->address, sizeof(self->address)) < 0) {
 		luaError(L, "Could not connect to host.");
 
 		return 0;

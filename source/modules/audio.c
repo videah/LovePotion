@@ -57,7 +57,7 @@ int initLoveAudio(lua_State *L) {
 
 	soundEnabled = !ndspInit();
 
-	if R_FAILED(soundEnabled) {
+	if (!soundEnabled) {
 		luaError(L, "NDSP could not initialize. Please dump dspfirm.cdc!");
 	}
 

@@ -70,13 +70,13 @@ int filesystemCreateDirectory(lua_State *L) {
 
 int filesystemGetDirectoryItems(lua_State *L) {
 
-	const char * path = filesystemCheckPath(luaL_checkstring(L, 1));
+	const char * path = filesystemGetPath(luaL_checkstring(L, 1));
 
 	DIR * dp;
 
 	dp = opendir (path);
 
-	lua_newtable(L);
+	char * * items;
 
 	int tablepos = 0;
 
@@ -86,24 +86,28 @@ int filesystemGetDirectoryItems(lua_State *L) {
 			struct dirent * ep;
 
 			ep = readdir (dp);
-
-			lua_pushstring(L, ep->d_name);
-
+			
+			//store names of stuff
+			items[tablepos] = ep->d_name;
+			
 			tablepos++;
 
-			lua_rawseti(L, -2, tablepos);
-
 			if (!ep) {
-				(void) closedir (dp);
+				closedir(dp);
+				
 				break;
 			}
 		}
 
-		return 1;
-
+	}
+	
+	lua_createtable(L, tablepos, 0);
+	for (int i = 0; i < tablepos; i++) {
+		lua_pushstring(L, items[i]);
+		lua_rawseti(L, -2, i + 1);
 	}
 
-	return 0;
+	return 1;
 
 }
 
@@ -129,7 +133,7 @@ int filesystemAppend(lua_State * L) {
 
 int filesystemIsFile(lua_State *L) {
 
-	const char * filename = filesystemCheckPath(luaL_checkstring(L, 1));
+	const char * filename = filesystemGetPath(luaL_checkstring(L, 1));
 
 	struct stat info;
 
@@ -170,7 +174,7 @@ int filesystemWrite(lua_State *L) {
 
 	size_t size = luaL_optnumber(L, 3, strlen(data));
 
-	FILE * file = fopen(filename, "w");
+	FILE * file = fopen(filename, "wb");
 
 	fwrite(data, 1, size, file);
 
@@ -184,7 +188,7 @@ int filesystemWrite(lua_State *L) {
 
 int filesystemIsDirectory(lua_State * L) {
 
-	const char * filename = filesystemCheckPath(luaL_checkstring(L, 1));
+	const char * filename = filesystemGetPath(luaL_checkstring(L, 1));
 
 	struct stat info;
 
@@ -244,6 +248,7 @@ char * filesystemCheckPath(char * luaString) {
 
 //Get the path we *want*. For Read operations only.
 char * filesystemGetPath(char * luaString) {
+	
 	FILE * tempFile = fopen(luaString, "rb");
 
 	if (tempFile == NULL) {
@@ -273,10 +278,11 @@ char * filesystemGetPath(char * luaString) {
 		fclose(tempFile);
 
 		return luaString;
-
+		
 	}
 
 }
+
 
 int fileNew(lua_State *L);
 int fileRead(lua_State *L);
