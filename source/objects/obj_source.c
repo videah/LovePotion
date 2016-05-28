@@ -302,30 +302,32 @@ const char *sourceInit(love_source *self, const char *filename, const char *load
 
 //Source, Offset (starts at 1), Samples per buffer * 2
 void fillBuffer() {
-	while true {
-		printf("Filling buffer..\n");
-		for (int i = 0; i < streamCount; i++) {
-			love_source * self = audioStreams[i];
+	printf("Filling buffer..\n");
+	svcWaitSynchronization(streamRequest, U64_MAX);
+
+	for (int i = 0; i < streamCount; i++) {
+		love_source * self = audioStreams[i];
 			
-			if ( self->type == TYPE_WAV ) {
+		if ( self->type == TYPE_WAV ) {
 
-				FILE * file = fopen(self->filename, "rb");
+			FILE * file = fopen(self->filename, "rb");
 
-				fread(self->data, SAMPLESPERBUFFER, 8, file);
+			fread(self->data, SAMPLESPERBUFFER * 2, 8, file);
 
-				self->offset += SAMPLESPERBUFFER;
-				if (self->offset > self->size) {
-					self->offset = (self->size - self->offset);
-				}
-
-				fseek(file, self->offset, SEEK_SET);
-
-				fclose(file);
+			self->offset += SAMPLESPERBUFFER * 2;
+			if (self->offset > self->size) {
+				self->offset = (self->size - self->offset);
 			}
+
+			fseek(file, self->offset, SEEK_SET);
+
+			fclose(file);
 		}
-		printf("Filled. Sleeping for 2s..\n");
-		svcSleepThread((u64)SOURCETHREADSLEEP);
 	}
+	printf("Sleeping..\n");
+	//svcSleepThread((u64)SOURCETHREADSLEEP);
+
+	svcClearEvent(streamRequest);
 }
 
 int sourceNew(lua_State *L) { // love.audio.newSource()

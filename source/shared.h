@@ -149,7 +149,7 @@ typedef struct {
 
 #define SOURCETHREADSLEEP 1000000ULL * 2 //2 seconds
 extern void fillBuffer();
-extern Thread sourceThread;
+extern Handle streamRequest;
 
 extern lua_State *L;
 extern int currentScreen;

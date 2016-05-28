@@ -38,6 +38,9 @@ bool errorOccured = false;
 bool forceQuit = false;
 const char *errMsg;
 
+Thread streamThread;
+Handle streamRequest;
+
 void displayError() {
 
 	errMsg = lua_tostring(L, -1);
@@ -61,9 +64,11 @@ int main() {
 
 	s32 prio = 0;
 
+	svcCreateEvent(&streamRequest, 0);
+
 	svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
 
-	Thread sourceThread = threadCreate(fillBuffer, (void *)NULL, 1024, prio-1, -2, false); //update source function, argument, stack size, priority, CPU (default), don't detach
+	streamThread = threadCreate(fillBuffer, (void *)NULL, 1024, prio-1, -2, true); //update source function, argument, stack size, priority, CPU (default), don't detach
 
 	int streamCount = 0;
 
@@ -168,8 +173,7 @@ int main() {
 					displayError();
 			}
 
-			// Top screen
-			// Left side
+			svcSignalEvent(streamRequest);
 
 			sf2d_start_frame(GFX_TOP, GFX_LEFT);
 
@@ -255,9 +259,13 @@ int main() {
 	cfguExit();
 	ptmuExit();
 
-	threadJoin(sourceThread, U64_MAX);
+	svcSignalEvent(streamRequest);
 
-	threadFree(sourceThread);
+	threadJoin(streamThread, U64_MAX);
+
+	svcCloseHandle(streamRequest);
+
+	threadFree(streamThread);
 
 	if (initializeSocket) {
 		socExit(); 
