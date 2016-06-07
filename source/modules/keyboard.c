@@ -66,7 +66,7 @@ int inputScan(lua_State *L) { // love.keyboard.scan()
 
 			lua_pushinteger(L, touch.px);
 			lua_pushinteger(L, touch.py);
-			lua_pushstring(L, "l");
+			lua_pushinteger(L, 1);
 
 			lua_call(L, 3, 0);
 
@@ -89,7 +89,7 @@ int inputScan(lua_State *L) { // love.keyboard.scan()
 
 			lua_pushinteger(L, touch.px);
 			lua_pushinteger(L, touch.py);
-			lua_pushstring(L, "l");
+			lua_pushinteger(L, 1);
 
 			lua_call(L, 3, 0);
 

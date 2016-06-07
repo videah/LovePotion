@@ -24,7 +24,9 @@
 
 bool channelList[24];
 int streamCount;
-love_source * * audioStreams;
+love_stream_array audioStreams[24];
+
+int sourcePlay(lua_State *L);
 
 int getOpenChannel() {
 
@@ -171,8 +173,9 @@ const char *sourceInit(love_source *self, const char *filename, const char *load
 					
 					printf("Adding %s to streams!\n", self->filename);
 					
-					audioStreams[streamCount] = self;
-					streamCount++;
+					audioStreams[self->audiochannel].index = self;
+
+					printf("Added.\n");
 
 					fclose(file);
 
@@ -301,33 +304,36 @@ const char *sourceInit(love_source *self, const char *filename, const char *load
 }
 
 //Source, Offset (starts at 1), Samples per buffer * 2
-void fillBuffer() {
-	printf("Filling buffer..\n");
-	svcWaitSynchronization(streamRequest, U64_MAX);
+void fillBuffer(lua_State * L) {
+	printf("Filling buffers..\n");
+	
+	for (int i = 0; i < 24; i++) {
+		love_source * self = audioStreams[i].index;
+		
+		if (!ndspChnIsPlaying(self->audiochannel)) {
+			if ( self->type == TYPE_WAV ) {
 
-	for (int i = 0; i < streamCount; i++) {
-		love_source * self = audioStreams[i];
-			
-		if ( self->type == TYPE_WAV ) {
+				FILE * file = fopen(self->filename, "rb");
 
-			FILE * file = fopen(self->filename, "rb");
+				fread(self->data, SAMPLESPERBUFFER * 2, 8, file);
 
-			fread(self->data, SAMPLESPERBUFFER * 2, 8, file);
+				self->offset += SAMPLESPERBUFFER * 2;
+				if (self->offset > self->size) {
+					self->offset = (self->size - self->offset);
+				} 
 
-			self->offset += SAMPLESPERBUFFER * 2;
-			if (self->offset > self->size) {
-				self->offset = (self->size - self->offset);
+				if (self->offset == self->size) {
+					self->eof = 1;
+				}
+
+				fseek(file, self->offset, SEEK_SET);
+
+				fclose(file);
 			}
 
-			fseek(file, self->offset, SEEK_SET);
-
-			fclose(file);
+			printf("Buffer filled.\n");
 		}
 	}
-	printf("Sleeping..\n");
-	//svcSleepThread((u64)SOURCETHREADSLEEP);
-
-	svcClearEvent(streamRequest);
 }
 
 int sourceNew(lua_State *L) { // love.audio.newSource()

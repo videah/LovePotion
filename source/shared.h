@@ -57,7 +57,6 @@
 
 #include <ivorbiscodec.h>
 #include <ivorbisfile.h>
-#include <3ds/thread.h>
 
 #include "util.h"
 
@@ -98,6 +97,8 @@ typedef enum {
 #define SAMPLESPERBUFFER (SAMPLERATE / 30)
 #define BYTESPERSAMPLE 4
 
+extern void fillBuffer(lua_State * L);
+
 typedef struct {
 	love_source_type type;
 
@@ -122,7 +123,13 @@ typedef struct {
 
 	float mix[12];
 	ndspInterpType interp;
+
+	int eof;
 } love_source;
+
+typedef struct {
+  love_source * index;
+} love_stream_array;
 
 typedef struct {
 	int x;
@@ -147,10 +154,6 @@ typedef struct {
 	lua_CFunction renderFunction;
 } love_canvas;
 
-#define SOURCETHREADSLEEP 1000000ULL * 2 //2 seconds
-extern void fillBuffer();
-extern Handle streamRequest;
-
 extern lua_State *L;
 extern int currentScreen;
 extern int drawScreen;
@@ -163,8 +166,6 @@ extern char sdmcPath[255];
 
 extern char * filesystemCheckPath(char * luaString);
 extern char * filesystemGetPath(char * luaString);
-
-extern Result httpDownloadSocket(httpcContext * context, u8 * returnBody, int * returnStatusCode);
 
 extern bool shouldQuit;
 extern love_font *currentFont;

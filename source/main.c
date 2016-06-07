@@ -38,9 +38,6 @@ bool errorOccured = false;
 bool forceQuit = false;
 const char *errMsg;
 
-Thread streamThread;
-Handle streamRequest;
-
 void displayError() {
 
 	errMsg = lua_tostring(L, -1);
@@ -61,16 +58,6 @@ int main() {
 	luaL_requiref(L, "socket", initSocket, 0);
 
 	luaL_requiref(L, "socket.http", initHTTP, 0);
-
-	s32 prio = 0;
-
-	svcCreateEvent(&streamRequest, 0);
-
-	svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
-
-	streamThread = threadCreate(fillBuffer, (void *)NULL, 1024, prio-1, -2, true); //update source function, argument, stack size, priority, CPU (default), don't detach
-
-	int streamCount = 0;
 
 	sf2d_init(); // 2D Drawing lib.
 
@@ -93,20 +80,20 @@ int main() {
 	Result rc = romfsInit();
 
 	romfsExists = (rc) ? false : true;
-	
+
 	// Change working directory
 	if (romfsExists) {
 
-		u64 titleID;
+		printf("Ayylmao storing APP_NAME\n");
+		snprintf(sdmcPath, sizeof(sdmcPath), "sdmc:/LovePotion/%s/", APP_NAME);
 
-		APT_GetProgramID(&titleID);
-
-		snprintf(sdmcPath, sizeof(sdmcPath), "sdmc:/LovePotion/%X/", titleID);
-
+		printf("Changed to romfs!\n");
 		chdir("romfs:/");
 
+		printf("Making LovePotion folder on SDMC\n");
 		mkdir("sdmc:/LovePotion/", 0777);
 
+		printf("Making identity folder on SDMC\n");
 		mkdir(sdmcPath, 0777);
 
 	} else {
@@ -173,7 +160,7 @@ int main() {
 					displayError();
 			}
 
-			svcSignalEvent(streamRequest);
+			//fillBuffer(L);
 
 			sf2d_start_frame(GFX_TOP, GFX_LEFT);
 
@@ -255,24 +242,21 @@ int main() {
 	lua_close(L);
 
 	sftd_fini();
+
 	sf2d_fini();
+
 	cfguExit();
+
 	ptmuExit();
-
-	svcSignalEvent(streamRequest);
-
-	threadJoin(streamThread, U64_MAX);
-
-	svcCloseHandle(streamRequest);
-
-	threadFree(streamThread);
 
 	if (initializeSocket) {
 		socExit(); 
+
 		httpcExit();
 	}
 
 	if (soundEnabled) ndspExit();
+
 	if (romfsExists) romfsExit();
 
 	return 0;
