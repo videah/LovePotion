@@ -35,4 +35,6 @@ char* concat(char *s1, char *s2);
 
 int getType(const char *name);
 
+char* unicode_to_ascii(wchar_t* str, size_t length);
+
 #endif

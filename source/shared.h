@@ -43,6 +43,18 @@
 #include <dirent.h>
 #include <3ds/services/cfgu.h>
 
+#include <3ds/services/soc.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <fcntl.h>
+
+#include <3ds/services/httpc.h>
+
+#include <errno.h>
+
 #include <ivorbiscodec.h>
 #include <ivorbisfile.h>
 
@@ -81,6 +93,12 @@ typedef enum {
 	TYPE_WAV = 1
 } love_source_type;
 
+#define SAMPLERATE 44100
+#define SAMPLESPERBUFFER (SAMPLERATE / 30)
+#define BYTESPERSAMPLE 4
+
+extern void fillBuffer(lua_State * L);
+
 typedef struct {
 	love_source_type type;
 
@@ -91,13 +109,27 @@ typedef struct {
 	u32 encoding;
 	u32 nsamples;
 	u32 size;
-	char* data;
+	char * data;
 	bool loop;
 	int audiochannel;
 
+	bool stream;
+
+	const char * filename;
+
+	size_t offset;
+	
+	u32 waveBufferPosition;
+
 	float mix[12];
 	ndspInterpType interp;
+
+	int eof;
 } love_source;
+
+typedef struct {
+  love_source * index;
+} love_stream_array;
 
 typedef struct {
 	int x;
@@ -105,6 +137,22 @@ typedef struct {
 	int width;
 	int height;
 } love_quad;
+
+#define SOCKETSIZE 8192
+typedef struct {
+	int socket;
+	struct sockaddr_in address;
+	struct hostent * host;
+	char * ip;
+	int port;
+} lua_socket;
+
+typedef struct {
+	sf2d_rendertarget * renderTarget;
+	int width;
+	int height;
+	lua_CFunction renderFunction;
+} love_canvas;
 
 extern lua_State *L;
 extern int currentScreen;
@@ -114,13 +162,20 @@ extern char keyNames[32][32];
 extern touchPosition touch;
 extern bool touchIsDown;
 extern char *rootDir;
+extern char sdmcPath[255];
+
+extern char * filesystemCheckPath(char * luaString);
+extern char * filesystemGetPath(char * luaString);
+
 extern bool shouldQuit;
 extern love_font *currentFont;
 extern bool is3D;
 extern const char *fontDefaultInit();
+
 extern bool soundEnabled;
+extern bool initializeSocket;
+
 extern bool channelList[24];
 extern u32 defaultFilter;
 extern char *defaultMinFilter;
 extern char *defaultMagFilter;
-extern bool isCIA;

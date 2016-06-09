@@ -43,7 +43,7 @@ JINGLE := meta/jingle.wav
 
 # CIA Options
 
-APP_PRODUCT_CODE := CTR-P-LP
+APP_PRODUCT_CODE := CTR-P-LOVEPOTION
 APP_UNIQUE_ID := 0x1043
 APP_SYSTEM_MODE := 64MB
 APP_SYSTEM_MODE_EXT := Legacy
@@ -69,6 +69,7 @@ LIBS	:= -lsfil -lpng -ljpeg -lz -lsf2d -lctru -lm -lsftd -lfreetype -logg
 
 UNAME := $(shell uname)
 
+CFLAGS += -DAPP_NAME=\"$(APP_TITLE)\"
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
@@ -211,7 +212,7 @@ $(OUTPUT).3dsx	:	icon.bin banner.bin $(OUTPUT).elf $(OUTPUT)-stripped.elf $(OUTP
 endif
 
 #---------------------------------------------------------------------------------
-icon.bin	:	
+icon.bin	:
 #---------------------------------------------------------------------------------
 ifeq ($(UNAME), Linux)
 	@$(TOPDIR)/tools/linux/bannertool makesmdh -s $(APP_TITLE) -l $(APP_TITLE) -p $(APP_AUTHOR) -i $(TOPDIR)/$(ICON) -o $(TOPDIR)/icon.bin -f visible allow3d
@@ -222,7 +223,7 @@ else
 endif
 
 #---------------------------------------------------------------------------------
-banner.bin	:	
+banner.bin	:
 #---------------------------------------------------------------------------------
 ifeq ($(UNAME), Linux)
 	@$(TOPDIR)/tools/linux/bannertool makebanner -i $(TOPDIR)/$(BANNER) -a $(TOPDIR)/$(JINGLE) -o $(TOPDIR)/banner.bin
@@ -243,7 +244,7 @@ $(OUTPUT)-stripped.elf : $(OUTPUT).elf
 	@arm-none-eabi-strip $(OUTPUT)-stripped.elf
 
 #---------------------------------------------------------------------------------
-$(OUTPUT).bin	:	
+$(OUTPUT).bin	:
 #---------------------------------------------------------------------------------
 ifeq ($(UNAME), Linux)
 	@$(TOPDIR)/tools/linux/3dstool -cvtf romfs $(OUTPUT).bin --romfs-dir $(TOPDIR)/game

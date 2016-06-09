@@ -23,6 +23,10 @@
 #include <shared.h>
 
 bool channelList[24];
+int streamCount;
+love_stream_array audioStreams[24];
+
+int sourcePlay(lua_State *L);
 
 int getOpenChannel() {
 
@@ -40,11 +44,22 @@ int getOpenChannel() {
 #define CLASS_TYPE  LUAOBJ_TYPE_SOURCE
 #define CLASS_NAME  "Source"
 
-const char *sourceInit(love_source *self, const char *filename) {
+const char *sourceInit(love_source *self, const char *filename, const char *loadingtype) {
+
+	if ( strncmp(loadingtype, "stream", 6) == 0 ) {
+		self->stream = true;
+	} else {
+		self->stream = false;
+	}
+
+	self->offset = 1;
+
+	self->waveBufferPosition = 0;
 
 	if (fileExists(filename)) {
 
 		for (int i=0; i<12; i++) self->mix[i] = 1.0f;
+
 		self->interp = NDSP_INTERP_LINEAR;
 
 		const char *ext = fileExtension(filename);
@@ -65,9 +80,11 @@ const char *sourceInit(love_source *self, const char *filename) {
 		
 		if (self->type == TYPE_WAV) {
 
-			FILE *file = fopen(filename, "rb");
+			FILE * file = fopen(filename, "rb");
 
 			if (file) {
+
+				self->filename = filename;
 
 				bool valid = true;
 
@@ -144,9 +161,37 @@ const char *sourceInit(love_source *self, const char *filename) {
 				self->audiochannel = getOpenChannel();
 				self->loop = false;
 
-				// Read data
-				if (linearSpaceFree() < self->size) return "not enough linear memory available";
-				self->data = linearAlloc(self->size);
+				if (self->stream) {
+
+					if (linearSpaceFree() < SAMPLESPERBUFFER * BYTESPERSAMPLE * 2) {
+
+						return "not enough linear memory available";
+
+					}
+
+					self->data = linearAlloc(SAMPLESPERBUFFER * BYTESPERSAMPLE * 2);
+					
+					printf("Adding %s to streams!\n", self->filename);
+					
+					audioStreams[self->audiochannel].index = self;
+
+					printf("Added.\n");
+
+					fclose(file);
+
+					return NULL;
+
+				} else {
+
+					if (linearSpaceFree() < self->size) {
+
+						return "not enough linear memory available";
+
+					}
+
+					self->data = linearAlloc(self->size);
+				
+				}
 
 				fread(self->data, self->size, 1, file);
 
@@ -179,7 +224,6 @@ const char *sourceInit(love_source *self, const char *filename) {
 					return "could not retrieve ogg audio stream information";
 
 				}
-
 
 				self->rate = (float)vorbisInfo->rate;
 
@@ -259,16 +303,51 @@ const char *sourceInit(love_source *self, const char *filename) {
 	}
 }
 
+//Source, Offset (starts at 1), Samples per buffer * 2
+void fillBuffer(lua_State * L) {
+	printf("Filling buffers..\n");
+	
+	for (int i = 0; i < 24; i++) {
+		love_source * self = audioStreams[i].index;
+		
+		if (!ndspChnIsPlaying(self->audiochannel)) {
+			if ( self->type == TYPE_WAV ) {
+
+				FILE * file = fopen(self->filename, "rb");
+
+				fread(self->data, SAMPLESPERBUFFER * 2, 8, file);
+
+				self->offset += SAMPLESPERBUFFER * 2;
+				if (self->offset > self->size) {
+					self->offset = (self->size - self->offset);
+				} 
+
+				if (self->offset == self->size) {
+					self->eof = 1;
+				}
+
+				fseek(file, self->offset, SEEK_SET);
+
+				fclose(file);
+			}
+
+			printf("Buffer filled.\n");
+		}
+	}
+}
+
 int sourceNew(lua_State *L) { // love.audio.newSource()
 
 	if (!soundEnabled) return 0;
 
 	const char *filename = luaL_checkstring(L, 1);
 
+	const char *type = luaL_optstring(L, 2, "static");
+
 	love_source *self = luaobj_newudata(L, sizeof(*self));
 	luaobj_setclass(L, CLASS_TYPE, CLASS_NAME);
 
-	const char *error = sourceInit(self, filename);
+	const char *error = sourceInit(self, filename, type);
 
 	if (error) luaError(L, error);
 
@@ -304,17 +383,25 @@ int sourcePlay(lua_State *L) { // source:play()
 	}
 
 	ndspChnWaveBufClear(self->audiochannel);
+
 	ndspChnReset(self->audiochannel);
+
 	ndspChnInitParams(self->audiochannel);
+
 	ndspChnSetMix(self->audiochannel, self->mix);
+
 	ndspChnSetInterp(self->audiochannel, self->interp);
+
 	ndspChnSetRate(self->audiochannel, self->rate);
+
 	ndspChnSetFormat(self->audiochannel, NDSP_CHANNELS(self->channels) | NDSP_ENCODING(self->encoding));
 
-	ndspWaveBuf* waveBuf = calloc(1, sizeof(ndspWaveBuf));
+	ndspWaveBuf * waveBuf = calloc(1, sizeof(ndspWaveBuf));
 
 	waveBuf->data_vaddr = self->data;
+
 	waveBuf->nsamples = self->nsamples;
+
 	waveBuf->looping = self->loop;
 
 	DSP_FlushDataCache((u32*)self->data, self->size);

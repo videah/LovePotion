@@ -125,6 +125,7 @@ void sf2d_free_texture(sf2d_texture *texture)
 	}
 }
 
+
 void sf2d_free_target(sf2d_rendertarget *target)
 {
 	sf2d_free_texture(&(target->texture));

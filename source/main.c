@@ -24,11 +24,13 @@
 #include "boot_lua.h"
 #include "nogame_lua.h"
 
-char *rootDir = "";
+char sdmcPath[255];
 
 lua_State *L;
 
 int initLove(lua_State *L);
+int initSocket(lua_State * L);
+int initHTTP(lua_State * L);
 
 bool romfsExists;
 
@@ -39,6 +41,7 @@ const char *errMsg;
 void displayError() {
 
 	errMsg = lua_tostring(L, -1);
+
 	errorOccured = true;
 	printf("\e[0;31m%s\e[0m",errMsg);
 
@@ -47,15 +50,24 @@ void displayError() {
 int main() {
 
 	L = luaL_newstate();
+
 	luaL_openlibs(L);
+
 	luaL_requiref(L, "love", initLove, 1);
 
+	luaL_requiref(L, "socket", initSocket, 0);
+
+	luaL_requiref(L, "socket.http", initHTTP, 0);
+
 	sf2d_init(); // 2D Drawing lib.
+
 	sftd_init(); // Text Drawing lib.
+
 	cfguInit();
+
 	ptmuInit();
 
-	// consoleInit(GFX_BOTTOM, NULL);
+	consoleInit(GFX_BOTTOM, NULL);
 
 	sf2d_set_clear_color(RGBA8(0x0, 0x0, 0x0, 0xFF)); // Reset background color.
 
@@ -70,16 +82,27 @@ int main() {
 	romfsExists = (rc) ? false : true;
 
 	// Change working directory
-
 	if (romfsExists) {
 
+		printf("Ayylmao storing APP_NAME\n");
+		snprintf(sdmcPath, sizeof(sdmcPath), "sdmc:/LovePotion/%s/", APP_NAME);
+
+		printf("Changed to romfs!\n");
 		chdir("romfs:/");
+
+		printf("Making LovePotion folder on SDMC\n");
+		mkdir("sdmc:/LovePotion/", 0777);
+
+		printf("Making identity folder on SDMC\n");
+		mkdir(sdmcPath, 0777);
 
 	} else {
 
 		char cwd[256];
 		getcwd(cwd, 256);
 		char newCwd[261];
+
+		snprintf(sdmcPath, sizeof(sdmcPath), "%s", "");
 
 		strcat(newCwd, cwd);
 		strcat(newCwd, "game");
@@ -137,8 +160,7 @@ int main() {
 					displayError();
 			}
 
-			// Top screen
-			// Left side
+			//fillBuffer(L);
 
 			sf2d_start_frame(GFX_TOP, GFX_LEFT);
 
@@ -160,11 +182,11 @@ int main() {
 
 			// Bot screen
 
-			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
+			//sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
 
-				if (luaL_dostring(L, "if love.draw then love.draw() end")) displayError();
+			//	if (luaL_dostring(L, "if love.draw then love.draw() end")) displayError();
 
-			sf2d_end_frame();
+			//sf2d_end_frame();
 
 			luaL_dostring(L, "love.graphics.present()");
 
@@ -220,11 +242,21 @@ int main() {
 	lua_close(L);
 
 	sftd_fini();
+
 	sf2d_fini();
+
 	cfguExit();
+
 	ptmuExit();
 
+	if (initializeSocket) {
+		socExit(); 
+
+		httpcExit();
+	}
+
 	if (soundEnabled) ndspExit();
+
 	if (romfsExists) romfsExit();
 
 	return 0;

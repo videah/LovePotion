@@ -60,6 +60,22 @@ static int systemGetModel(lua_State *L) { // love.system.getModel()
 
 }
 
+static int systemGetMemory(lua_State *L) {
+	
+	lua_pushnumber(L, linearSpaceFree());
+
+	return 1;
+
+}
+
+static int systemGetWifiStrength(lua_State * L) {
+	u8 wifiStrength = osGetWifiStrength();
+
+	lua_pushnumber(L, wifiStrength);
+
+	return 1;
+}
+
 static int systemGetLanguage(lua_State *L) { // love.system.getLanguage()
 	
 	u8 language;
@@ -192,6 +208,8 @@ int initLoveSystem(lua_State *L) {
 		{ "getModel",	   systemGetModel    },
 		{ "getLanguage",   systemGetLanguage },
 		{ "getRegion",     systemGetRegion   },
+		{ "getWifiStrength", systemGetWifiStrength},
+		{ "getMemory", systemGetMemory},
 		{ 0, 0 },
 	};
 
