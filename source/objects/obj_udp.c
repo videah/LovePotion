@@ -208,6 +208,23 @@ int socketReceiveFrom(lua_State * L) { //socket:receivefrom -- get data from con
 	return 3;
 }
 
+int socketSetOption(lua_State * L)
+{
+	lua_socket * self = luaobj_checkudata(L, 1, CLASS_TYPE);
+
+	const char * option = luaL_checkstring(L, 1);
+	bool enabled = lua_isboolean(L, 2); 
+
+	if (strncmp(option, "broadcast", 9) == 0)
+	{
+		setsockopt(self->socket, SOL_SOCKET, SO_BROADCAST, (char *)&enabled, sizeof(bool));
+	}
+	else if (strncmp(option, "dontroute", 9) == 0)
+	{
+		setsockopt(self->socket, SOL_SOCKET, SO_DONTROUTE, (char *)&enabled, sizeof(bool));
+	}
+}
+
 int socketSend(lua_State * L) {
 	lua_socket * self = luaobj_checkudata(L, 1, CLASS_TYPE);
 
@@ -417,6 +434,7 @@ int initSocketClass(lua_State *L) {
 		{"accept", socketAccept},
 		{"connect", socketConnect},
 		{"listen", socketListen},
+		{"setoption", socketSetOption},
 		{0,	0},
 	};
 

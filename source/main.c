@@ -68,33 +68,33 @@ int main() {
 	ptmuInit();
 
 	consoleInit(GFX_BOTTOM, NULL);
+	printf("Console init!\n");
 
 	sf2d_set_clear_color(RGBA8(0x0, 0x0, 0x0, 0xFF)); // Reset background color.
+	printf("Setting clear color for sd2d\n");
 
 	osSetSpeedupEnable(true); // Enables CPU speedup for a free performance boost.
-
+	printf("Enabling OS speedup\n");
+	
 	// Detect if we are running on a .cia, because if we are
 	// we load from RomFS rather than the SD Card.
 	// TODO: Load RomFS from .3dsx's aswell.
-
 	Result rc = romfsInit();
+	printf("ROMFS: %d (should be 0)\n", rc);
 
 	romfsExists = (rc) ? false : true;
 
 	// Change working directory
 	if (romfsExists) {
 
-		printf("Ayylmao storing APP_NAME\n");
-		snprintf(sdmcPath, sizeof(sdmcPath), "sdmc:/LovePotion/%s/", APP_NAME);
+		int charPrinted = snprintf(sdmcPath, sizeof(sdmcPath), "sdmc:/LovePotion/%s/", APP_NAME);
 
-		printf("Changed to romfs!\n");
-		chdir("romfs:/");
+		int succ = chdir("romfs:/");
 
-		printf("Making LovePotion folder on SDMC\n");
-		mkdir("sdmc:/LovePotion/", 0777);
+		succ = mkdir("sdmc:/LovePotion/\0", 0777);
+		printf("Errno: %d\n", errno);
 
-		printf("Making identity folder on SDMC\n");
-		mkdir(sdmcPath, 0777);
+		succ = mkdir(sdmcPath, 0777);
 
 	} else {
 
