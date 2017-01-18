@@ -204,10 +204,6 @@ int filesystemLoad(lua_State *L) {
 
 }
 
-int filesystemSetRequirePath(lua_State *L) {
-
-}
-
 int fileNew(lua_State *L);
 int fileRead(lua_State *L);
 int fileWrite(lua_State *L);
@@ -230,6 +226,8 @@ int initLoveFilesystem(lua_State *L) {
 		{ "isFile",	filesystemIsFile},
 		{ "isDirectory",	filesystemIsDirectory},
 		{ "write",	filesystemWrite},
+		{ "remove", filesystemRemove},
+		{ "load", filesystemLoad},
 		{ 0, 0 },
 	};
 
