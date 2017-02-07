@@ -22,50 +22,49 @@
 
 #include <shared.h>
 
-bool soundEnabled;
+bool initializeSocket;
+static void * socketBuffer;
 
-static int audioStop(lua_State *L) { // love.audio.stop()
+int newUDP(lua_State * L);
+int socketNewTCP(lua_State * L);
 
-	if (!soundEnabled) return 0;
-
-	for (int i = 0; i <= 23; i++) {
-		ndspChnWaveBufClear(i);
+int socketShutdown(lua_State * L) {
+	if (initializeSocket) {
+		socExit();
+		
+		initializeSocket = false;
 	}
 
 	return 0;
-
 }
 
-static int audioSetVolume(lua_State *L) { // love.audio.setVolume()
+int initSocket(lua_State *L) {
+	if (!initializeSocket) {
+		socketBuffer = memalign(0x1000, 0x100000);
 
-	float vol = luaL_checknumber(L, 1);
-	if (vol > 1) vol = 1;
-	if (vol < 0) vol = 0;
+		Result socketIsInitialized = socInit(socketBuffer, 0x100000);
 
-	float mix[12];
-
-	for (int i=0; i<=3; i++) mix[i] = vol;
-	for (int i=0; i<=23; i++) ndspChnSetMix(i, mix);
-
-	return 0;
-	
-}
-
-int sourceNew(lua_State *L);
-
-int initLoveAudio(lua_State *L) {
-
-	soundEnabled = !ndspInit();
+		if (R_FAILED(socketIsInitialized)) {
+			luaError(L, "Failed to initialize LuaSocket.");
+		} else {
+			initializeSocket = true;
+		}
+	}
 
 	luaL_Reg reg[] = {
-		{ "stop",		audioStop	},
-		{ "newSource",	sourceNew	},
-		{ "setVolume", audioSetVolume},
+		{"udp", newUDP},
+		{"tcp", socketNewTCP},
+		{"shutdown", socketShutdown},
 		{ 0, 0 },
 	};
+
+	luaL_newmetatable(L, "Socket");
+	
+	lua_pushvalue(L, -1);
+	
+	lua_setfield(L, -2, "__index");
 
 	luaL_newlib(L, reg);
 
 	return 1;
-
 }

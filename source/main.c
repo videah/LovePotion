@@ -35,6 +35,12 @@ bool romfsExists;
 bool errorOccured = false;
 bool forceQuit = false;
 const char *errMsg;
+bool irrstEnabled = false;
+
+char * identity = "SuperGame";
+char * path = "sdmc:/LovePotion/";
+
+float updateDelay = STREAM_RATE;
 
 void displayError() {
 
@@ -54,8 +60,12 @@ int main() {
 	sftd_init(); // Text Drawing lib.
 	cfguInit();
 	ptmuInit();
+	
+	Result ir = irrstInit();
 
-	// consoleInit(GFX_BOTTOM, NULL);
+	consoleInit(GFX_BOTTOM, NULL);
+
+	irrstEnabled = (ir) ? false : true;
 
 	sf2d_set_clear_color(RGBA8(0x0, 0x0, 0x0, 0xFF)); // Reset background color.
 
@@ -88,6 +98,9 @@ int main() {
 	}
 
 	luaL_dobuffer(L, boot_lua, boot_lua_size, "boot"); // Do some setup Lua side.
+
+	//in general, make the LovePotion folder cause ye
+	mkdir(path, 0777);
 
 	// If main.lua exists, execute it.
 	// If not then just load the nogame screen.
@@ -137,6 +150,15 @@ int main() {
 					displayError();
 			}
 
+
+			//update streams
+			if (updateDelay > 0) {
+				updateDelay -= dt;
+			} else {
+				updateStreams();
+				updateDelay = STREAM_RATE;
+			}
+
 			// Top screen
 			// Left side
 
@@ -160,11 +182,11 @@ int main() {
 
 			// Bot screen
 
-			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
+			//sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
 
-				if (luaL_dostring(L, "if love.draw then love.draw() end")) displayError();
+			//	if (luaL_dostring(L, "if love.draw then love.draw() end")) displayError();
 
-			sf2d_end_frame();
+			//sf2d_end_frame();
 
 			luaL_dostring(L, "love.graphics.present()");
 
@@ -223,6 +245,8 @@ int main() {
 	sf2d_fini();
 	cfguExit();
 	ptmuExit();
+	
+	if (irrstEnabled) irrstExit();
 
 	if (soundEnabled) ndspExit();
 	if (romfsExists) romfsExit();

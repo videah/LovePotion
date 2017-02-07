@@ -46,11 +46,20 @@
 #include <ivorbiscodec.h>
 #include <ivorbisfile.h>
 
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <fcntl.h>
+
 #include "util.h"
 
 #define luaL_dobuffer(L, b, n, s) (luaL_loadbuffer(L, b, n, s) || lua_pcall(L, 0, LUA_MULTRET, 0))
 
 #define CONFIG_3D_SLIDERSTATE (*(float*)0x1FF81080)
+
+#define STREAM_RATE (0.017648 * 3.7)
 
 typedef struct {
     int id;
@@ -91,12 +100,19 @@ typedef struct {
 	u32 encoding;
 	u32 nsamples;
 	u32 size;
-	char* data;
+	char * data;
 	bool loop;
 	int audiochannel;
 
 	float mix[12];
 	ndspInterpType interp;
+	
+	bool stream; //if it should stream
+	
+	long position;
+	int currentSection;
+	u32 chunkSamples;
+	int eof;
 } love_source;
 
 typedef struct {
@@ -105,6 +121,26 @@ typedef struct {
 	int width;
 	int height;
 } love_quad;
+
+typedef struct {
+	int width;
+	int height;
+	C3D_RenderTarget * target;
+} love_canvas;
+
+typedef struct {
+	love_image * img;
+	love_canvas * canvas;
+} love_drawable;
+
+#define SOCKETSIZE 8192
+typedef struct {
+	int socket;
+	struct sockaddr_in address;
+	struct hostent * host;
+	char * ip;
+	int port;
+} lua_socket;
 
 extern lua_State *L;
 extern int currentScreen;
@@ -118,9 +154,18 @@ extern bool shouldQuit;
 extern love_font *currentFont;
 extern bool is3D;
 extern const char *fontDefaultInit();
+
+const char * sourceOggDecodeFull(love_source * self);
+const char * sourceOggDecodeStream(love_source * self, bool updateDecode);
+void sourceStreamPlay(love_source * self);
+void updateStreams();
+
+extern love_source * streams[24];
 extern bool soundEnabled;
 extern bool channelList[24];
 extern u32 defaultFilter;
 extern char *defaultMinFilter;
 extern char *defaultMagFilter;
-extern bool isCIA;
+extern bool irrstEnabled;
+extern char * identity;
+extern float dt;
