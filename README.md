@@ -24,7 +24,8 @@ Go [here](https://github.com/VideahGams/LovePotion/releases) for semi-stable rel
 
 Running your game without any changes is very unlikely, so it's recommended to currently use LövePotion to make games from the ground up.
 
- #### Can I help?
+
+#### Can I help?
 
 Yes, see the [CONTRIBUTING.md](https://www.github.com/VideahGams/LovePotion/tree/master/CONTRIBUTING.md) for more details.
 
@@ -73,6 +74,7 @@ No.
  * [Idiot](https://gbatemp.net/threads/preview-idiot-a-puzzle-platformer.408774) by TurtleP
  * [ravimid](https://hoksy.itch.io/ravimid) by hoksy "raisin bran" jp
  * [Jetski 3DS](https://github.com/miltoncandelero/JETSKI-3DS/releases/tag/Potato-Version) by miltoncandelero
+ 
 Send me your projects so I can showcase them here!
 
 # Dependencies
