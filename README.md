@@ -1,3 +1,7 @@
+**NOTE: This project has since changed hands and as such this repo is now archived.**
+
+[You'll want to visit the LoveBrew repo instead!](https://github.com/lovebrew/LovePotion)
+
 <p align="center">
 	<img src="http://i.imgur.com/uJQNDys.png"/>
 </p>
